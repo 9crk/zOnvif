@@ -11,7 +11,7 @@
 #include<arpa/inet.h>
 #include<netinet/in.h>
 char ODM_FIND[] ="<?xml version=\"1.0\" encoding=\"utf-8\"?><SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:wsd=\"http://schemas.xmlsoap.org/ws/2005/04/discovery\" xmlns:wsa=\"http://schemas.xmlsoap.org/ws/2004/08/addressing\" 	xmlns:dn=\"http://www.onvif.org/ver10/network/wsdl\">\r\n<SOAP-ENV:Header>\r\n<wsa:MessageID>urn:uuid:6a9fd739-c1fe-4db1-bb55-ed835ec98fb0</wsa:MessageID>\r\n<wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>\r\n<wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</wsa:Action>\r\n</SOAP-ENV:Header>\r\n<SOAP-ENV:Body>\r\n<wsd:Probe>\r\n<wsd:Types>dn:NetworkVideoTransmitter</wsd:Types>\r\n<wsd:Scopes />\r\n</wsd:Probe>\r\n</SOAP-ENV:Body>\r\n</SOAP-ENV:Envelope>\r\n\r\n";
-
+char SSDP_FIND[]="M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 10\r\nST: ssdp:all\r\n";
 int gMcast_fd;
 static int getServiceUrl(char*inBuf,char*outBuf);
 static int server_thread(void*arg)
@@ -21,7 +21,7 @@ static int server_thread(void*arg)
 	int addr_len;
 	struct timeval tv_out;
  
-	int port = 3702;
+	int port = 1900;
 	char ipStr[20] = "239.255.255.250";
 	int cnt;
 	fd_set set;
@@ -84,6 +84,7 @@ static int server_thread(void*arg)
 			memset(buff,0,15000);
 			cnt = recvfrom(gMcast_fd,buff,15000,0,(struct sockaddr*)&local_addr,&addr_len);
 			if(cnt > 0){
+				printf("000000000000000000000%s\n",buff);
 				memset(srvUrl,0,512);
 				err = getServiceUrl(buff,srvUrl);
 				if(err==0)printf("==========================%s\n",srvUrl);
@@ -114,13 +115,11 @@ static int getServiceMedia()
 {
 	
 } 
-int mcast_send(char*str,int len)
+int mcast_send(char*str,int len,char*ipStr,int port)
 {
 	struct sockaddr_in mcast_addr;
  
 	int icnt,cnt;
-	int port = 3702;
-	char ipStr[20] = "239.255.255.250";
 	cnt = 0;
 #if 0
 	gMcast_fd = socket(AF_INET,SOCK_DGRAM,0);
@@ -148,7 +147,8 @@ int main()
 	start_listen();
 	sleep(1);
 	
-	mcast_send(ODM_FIND,strlen(ODM_FIND));
+	//mcast_send(ODM_FIND,strlen(ODM_FIND));
+	mcast_send(SSDP_FIND,strlen(SSDP_FIND),"239.255.255.250",1900);
 	//mcast_send(strFoundCMD_B,strlen(strFoundCMD_B));
 	 
 	sleep(1000000);
