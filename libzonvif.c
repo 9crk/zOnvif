@@ -10,8 +10,13 @@
 #include<sys/types.h>
 #include<arpa/inet.h>
 #include<netinet/in.h>
+
 char ODM_FIND[] ="<?xml version=\"1.0\" encoding=\"utf-8\"?><SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:wsd=\"http://schemas.xmlsoap.org/ws/2005/04/discovery\" xmlns:wsa=\"http://schemas.xmlsoap.org/ws/2004/08/addressing\" 	xmlns:dn=\"http://www.onvif.org/ver10/network/wsdl\">\r\n<SOAP-ENV:Header>\r\n<wsa:MessageID>urn:uuid:6a9fd739-c1fe-4db1-bb55-ed835ec98fb0</wsa:MessageID>\r\n<wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>\r\n<wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</wsa:Action>\r\n</SOAP-ENV:Header>\r\n<SOAP-ENV:Body>\r\n<wsd:Probe>\r\n<wsd:Types>dn:NetworkVideoTransmitter</wsd:Types>\r\n<wsd:Scopes />\r\n</wsd:Probe>\r\n</SOAP-ENV:Body>\r\n</SOAP-ENV:Envelope>\r\n\r\n";
 char SSDP_FIND[]="M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 10\r\nST: ssdp:all\r\n";
+char  GET_SERVICE[] = "POST /onvif/device_service HTTP/1.1\r\nhost: 192.168.1.33\r\nContent-Type: application/soap+xml; charset=utf-8\r\nContent-Length: 346\r\n\r\n<?xml version=\"1.0\" encoding=\"utf-8\"?><s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Body xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><GetServices xmlns=\"http://www.onvif.org/ver10/device/wsdl\"><IncludeCapability>true</IncludeCapability></GetServices></s:Body></s:Envelope>";
+char GET_MEDIA[]="POST /onvif/device_service HTTP/1.1\r\nHost: 192.168.1.33\r\nContent-Type: application/soap+xml; charset=utf-8\r\nContent-Length: 347\r\n\r\n<?xml version=\"1.0\" encoding=\"utf-8\"?><s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Body xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><GetServices xmlns=\"http://www.onvif.org/ver10/device/wsdl\"><IncludeCapability>false</IncludeCapability></GetServices></s:Body></s:Envelope>";
+char GET_PROFILE[]="POST /onvif/Media HTTP/1.1\r\nHost: 192.168.1.33\r\nContent-Type: application/soap+xml; charset=utf-8\r\nContent-Length: 289\r\n\r\n<?xml version=\"1.0\" encoding=\"utf-8\"?><s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Body xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><GetProfiles xmlns=\"http://www.onvif.org/ver10/media/wsdl\"/></s:Body></s:Envelope>";
+char AUTH_STR[]="POST /onvif/Media HTTP/1.1\r\nHost: 192.168.1.33\r\nContent-Type: application/soap+xml; charset=utf-8\r\nAuthorization: Digest username=\"admin\", realm=\"DS-2CD5026EFWD\", qop=\"auth\", algorithm=\"MD5\", uri=\"/onvif/Media\", nonce=\"4d6b5a474f546777516b55364e6d566d5a4749334d54673d\", nc=00000001, cnonce=\"712AB89D57F59525E8713FFE3C16197C\", response=\"64aa077b472188f4e862e85752b94719\"\r\nContent-Length: 289\r\n\r\n<?xml version=\"1.0\" encoding=\"utf-8\"?><s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Body xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><GetProfiles xmlns=\"http://www.onvif.org/ver10/media/wsdl\"/></s:Body></s:Envelope>";
 int gMcast_fd;
 static int getServiceUrl(char*inBuf,char*outBuf);
 static int server_thread(void*arg)
@@ -21,14 +26,14 @@ static int server_thread(void*arg)
 	int addr_len;
 	struct timeval tv_out;
  
-	int port = 1900;
+	int port = 3702;
 	char ipStr[20] = "239.255.255.250";
 	int cnt;
 	fd_set set;
 	struct timeval tv; 
 	
-    tv_out.tv_sec = 10;//�ȴ�1��
-    tv_out.tv_usec = 0;
+	tv_out.tv_sec = 10;//µÈ´ý1Ãë
+	tv_out.tv_usec = 0;
 	gMcast_fd = socket(AF_INET,SOCK_DGRAM,0);
 	if(gMcast_fd < 0){printf("socket err\n");return -1;}
 	memset(&local_addr,0,sizeof(local_addr));
@@ -111,9 +116,16 @@ static int getServiceUrl(char*inBuf,char*outBuf)
 	return 0;
 	//<d:XAddrs>http://192.168.1.31/onvif/device_service</d:XAddrs>
 }
-static int getServiceMedia()
+static int getServiceMedia(char* inBuf,char*outBuf)
 {
-	
+	int i;
+	char*p1 = strstr(inBuf,"<tds:XAddr>");
+	char*p2 = strstr(inBuf,"</tds:XAddr>");
+	int cpyLen = p2-p1-11;
+	if(p1 == NULL || p2 == NULL)return -1;
+	strncpy(outBuf,p1+11,cpyLen);
+	return 0;
+	//<tds:XAddr>http://192.168.1.33/onvif/Media</tds:XAddr>
 } 
 int mcast_send(char*str,int len,char*ipStr,int port)
 {
@@ -137,18 +149,65 @@ int mcast_send(char*str,int len,char*ipStr,int port)
 	}
 	sendto(gMcast_fd,&str[cnt],len,0,(struct sockaddr *)&mcast_addr,sizeof(mcast_addr));
 }
-int tcp_send()
+static int http_cmd(char*url,char*sndBuf,int sndLen,char*recvBuf,int*recvLen)
 {
-	//socketʵ��һ��http get post
+    int sock;  
+    struct sockaddr_in remote;
+    if((sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP))<0){  
+        perror("Can't create TCP socket!\n");  
+        exit(1);  
+    }
+    bzero(&remote,sizeof(remote));
+    remote.sin_family = AF_INET;
+    if(inet_aton(url,&remote.sin_addr) == 0) //服务器的IP地址来自程序的参数
+    {
+        printf("Server IP Address Error!\n");
+        exit(1);
+    }
+    remote.sin_port = htons(80);
+     int addr_len = sizeof(remote);
+    //向服务器发起连接,连接成功后client_socket代表了客户机和服务器的一个socket连接
+    if(connect(sock,(struct sockaddr*)&remote, addr_len) < 0)
+    {
+        printf("Can Not Connect To %s!\n",url);
+        exit(1);
+    }  
+    send(sock,sndBuf,sndLen,0);
+    *recvLen = recv(sock,recvBuf,100000,0);
+    return *recvLen;
 }
+extern int zMd5(char*inBuf,char*outBuf); 
 int main()
 {
+	char buff[10000];
+	char buff2[100];
 	
+	char  auth_qop[100];
+	char  auth_realm[100];
+	char auth_nonce[100];
+	int len;
 	start_listen();
 	sleep(1);
+	memset(buff,0,10000);
+	memset(buff2,0,100);
+	//http_cmd("192.168.1.33",GET_SERVICE,strlen(GET_SERVICE),buff,&len);
+	//getServiceMedia(buff,buff2);
+	http_cmd("192.168.1.33",GET_MEDIA,strlen(GET_MEDIA),buff,&len);
+	printf("%s\n",buff);
+	printf("_______________________________________________________________\n");	
+	memset(buff,0,10000);
+	http_cmd("192.168.1.33",GET_PROFILE,strlen(GET_PROFILE),buff,&len);
+	printf("%s\n",buff);
+	//strstr(buff,)
+	printf("_______________________________________________________________\n");
+	memset(buff,0,10000);
+	http_cmd("192.168.1.33",AUTH_STR,strlen(AUTH_STR),buff,&len);
+	printf("%s\n",buff);
+	zMd5("abcd",buff);
+	printf("__________________%s\r\n",buff);
 	
 	//mcast_send(ODM_FIND,strlen(ODM_FIND));
-	mcast_send(SSDP_FIND,strlen(SSDP_FIND),"239.255.255.250",1900);
+	//mcast_send(ODM_FIND,strlen(ODM_FIND),"239.255.255.250",3702);
 	//mcast_send(strFoundCMD_B,strlen(strFoundCMD_B));
 	 
 	sleep(1000000);
