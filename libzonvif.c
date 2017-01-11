@@ -176,9 +176,11 @@ static int http_cmd(char*url,char*sndBuf,int sndLen,char*recvBuf,int*recvLen)
     *recvLen = recv(sock,recvBuf,100000,0);
     return *recvLen;
 }
-extern int zMd5(char*inBuf,char*outBuf); 
+extern int zMd5(char*inBuf,int inLen,char*outBuf,int*outLen); 
+extern int zSHA1(char*inBuf,int inLen,char*outBuf,int*outLen);
 int main()
 {
+	int i;
 	char buff[10000];
 	char buff2[100];
 	
@@ -203,8 +205,11 @@ int main()
 	memset(buff,0,10000);
 	http_cmd("192.168.1.33",AUTH_STR,strlen(AUTH_STR),buff,&len);
 	printf("%s\n",buff);
-	zMd5("abcd",buff);
-	printf("__________________%s\r\n",buff);
+	
+	zMd5("abcd",4,buff,&len);
+	for(i=0;i<len;i++)printf("%02x",(unsigned char)buff[i]);printf("\n");
+	zSHA1("abcd",4,buff,&len);
+	for(i=0;i<len;i++)printf("%02x",(unsigned char)buff[i]);printf("\n");
 	
 	//mcast_send(ODM_FIND,strlen(ODM_FIND));
 	//mcast_send(ODM_FIND,strlen(ODM_FIND),"239.255.255.250",3702);

@@ -181,7 +181,7 @@ void MD5Transform(unsigned int state[4], unsigned char block[64])
     state[3] += d;  
 }  
 #include<stdio.h>
-int zMd5(char*inBuf,char*outBuf)
+int zMd5(char*inBuf,int inLen,char*outBuf,int* outLen)
 {
     int i;
     char safeBuf[1000];
@@ -193,5 +193,6 @@ int zMd5(char*inBuf,char*outBuf)
     for(i=0;i<16;i++){
         sprintf(outBuf,"%s%02x",outBuf,safeBuf[i]);
     }
+	*outLen = 32;
     return 0;
 }
